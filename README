@@ -1,0 +1,66 @@
+Question 1.
+No race conditions are present in this implementation of even-odd. On each pass
+the threads created only modify 2 elements of the array which are independent
+of the elements edited by each other thread in the pass. At the end of this
+pass, the main program waits for the threads to finish modification before
+going on to create more threads which will overlap with the elements of the
+previous threads. In this way, no thread is ever editing the same section of
+the shared resource at the same time.
+As for the global flag variable that each thread sets when it performs a swap,
+threads can only ever set this flag to 'true'. As such, the order in which they
+execute is of absolutely no consequence to the final value. No matter what
+order the threads execute in, the final value of the flag at the end of every
+iteration will not vary.
+
+Question 2.
+The even-odd sorting algorithm operates much like a modification of bubble sort.
+In bubble sort, an element will take at most n iterations to "bubble up" from
+the n-1 position of the array to the 0th position of the array. This is because
+on each iteration, every element will be swapped with its predecessors at most
+one time. Thus, by running through the array n times, it is guaranteed that if
+the smallest element in the array were at the n-1 position at the beginning, it
+will have been swapped up to the 0th position, where it belongs. In the even-
+odd sorting algorithm, each element can be swapped not once, but twice with its
+predecessors, once on the even pass, and then again on the even pass. This
+means that if the array began in reverse-sorted order, the smallest element at
+position n-1 will be placed in position 0 by well before the nth iteration, as
+it is able to move much further than it would in bubble sort. Adding to the
+fact that each iteration moves multiple elements concurrently, we can then
+apply this same logic to every element in the array, moving from the incorrect
+position to the correct one in fewer than n iterations.
+
+Question 3.
+First, create a boolean array of length n/2, 1 for each thread. Each thread, in
+addition to everything else given to it during the construction, is also given
+a pointer to their corresponding element in this array. Initially, they are all
+set to false, to indicate that their even pass has not completed. During each
+iteration, the array is assigned to all false values, and then as each thread
+executes, once it completes its sorting, the thread sets its corresponding
+flag in the array to true to indicate it is finished with the even pass, and
+then proceeds to busy wait until the flag of the thread handling x[k+1] is also
+true. At this time, the array knows that x[k+1] will no longer be handled by
+another thread, and thus can be safely modified, and that thread begins its odd
+pass. In this way, only n/2 threads will be needed to execute both passes,
+and, the passes may in fact be interleaved with one another. This will not
+result in a race condition, because each thread only sets its own flag, and the
+flags are only set after the thread is finished editing their portion of the
+array.
+The thread that handles x[n-1] needs not look at the flags, nor does it need to
+perform an odd pass. This is easily handled with conditional statements.
+
+Question 4.
+Building off of the answer before, this solution requires yet another array to
+be implemented and maintained by main. In this case, main plays the role of the
+manager for all of these threads. The second array serves the function of Join,
+wherein each index of the array is a flag that corresponds to a thread. In each
+iteration, the flags are set to false, and when a thread reaches the bottom of
+its odd pass, it sets its flag to true. The main function is running a for loop
+that busy-waits at each index sequentially until that flag is set to true. When
+that happens, it proceeds on to the next index, until each index flag is set to
+true. During this time, the threads are similarly busy-waiting. This ensures
+that no threads begin the next iteration of even-odd passes until everything
+else has been run its course. At this time, the main function can check if the
+swapped flag has been set by any thread. If it has not, then all the threads
+are told to Exit via a flag, and main finishes. Otherwise, all the flags of the
+array discussed in Question 3 are set back to false, causing the threads to run
+an even-odd iteration once more.
